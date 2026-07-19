@@ -1,9 +1,18 @@
-git clone ...
+### prePrerequisites
 
-cd TelePulse/infrastructure
+- Docker
+- Docker Compose
 
-./build.sh
+### steps
 
-docker compose up -d
+- git clone ...
 
+- cd TelePulse/infrastructure
+
+- ./build.sh
+
+- docker compose up -d
+
+
+### opening the shell 
 docker exec -it infrastructure-master-1 bash
