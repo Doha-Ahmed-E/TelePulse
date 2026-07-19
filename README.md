@@ -7,12 +7,9 @@
 
 - git clone ...
 
-- cd TelePulse/infrastructure
+- cd TelePulse
 
-- ./build.sh
-
-- docker compose up -d
-
+- ./scripts/bootstrap.sh
 
 ### opening the shell 
 docker exec -it infrastructure-master-1 bash
