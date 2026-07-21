@@ -3,7 +3,7 @@
 ## Prerequisites
 - Docker
 - Docker Compose
-- Python
+- Python3
 
 
 ## Dataset
@@ -127,8 +127,8 @@ beeline -u jdbc:hive2://localhost:10000
 ```
 Power BI settings:
 
-Host: localhost
-Port: 10000
-Database: telepulse
-Authentication: None
+- Host: localhost
+- Port: 10000
+- Database: telepulse
+- Authentication: None
 

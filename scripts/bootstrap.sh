@@ -2,10 +2,10 @@
 set -euo pipefail
 
 # venv and install dependencies
-python -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
+pip3 install --upgrade pip
+pip3 install -r requirements.txt
 
 echo "Environment ready."
 
@@ -20,7 +20,7 @@ sleep 30
 
 # merge datasets and upload to HDFS
 echo "Merging datasets..."
-python data/merge_datasets.py
+python3 data/merge_datasets.py
 
 echo "Uploading to HDFS..."
 ./data/upload_to_hdfs.sh
