@@ -106,3 +106,29 @@ Expected views:
 - vw_land_use
 - vw_spatial_diversity
 - vw_urban_vitality
+
+## Power BI Connection
+
+Inside the container: 
+
+```bash
+start-thriftserver.sh
+```
+
+```bash
+hiveserver2
+```
+
+### Verify Spark Thrift Server 
+in another container terminal:
+
+```bash
+beeline -u jdbc:hive2://localhost:10000
+```
+Power BI settings:
+
+Host: localhost
+Port: 10000
+Database: telepulse
+Authentication: None
+
