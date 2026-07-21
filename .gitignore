@@ -1,4 +1,31 @@
-data/*
-!data/.gitkeep
+# Python
+.venv/
+__pycache__/
+*.py[cod]
 
-jupyter/.cache
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+# Docker/Hadoop runtime data
+data/namenode/
+data/datanode1/
+data/datanode2/
+
+# Spark/Hive generated files
+spark-warehouse/
+metastore_db/
+
+# Logs
+*.log
+
+# Datasets
+data/raw/*
+data/merged/*
+
+# Keep the directories
+!data/raw/.gitkeep
+!data/merged/.gitkeep
