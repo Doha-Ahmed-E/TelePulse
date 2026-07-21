@@ -29,3 +29,6 @@ data/merged/*
 # Keep the directories
 !data/raw/.gitkeep
 !data/merged/.gitkeep
+
+# Keep static map files
+!data/merged/*.geojson
