@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
 # venv and install dependencies
-python3 -m venv .venv
+python -m venv .venv
 source .venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
@@ -20,8 +20,32 @@ sleep 30
 
 # merge datasets and upload to HDFS
 echo "Merging datasets..."
-python3 scripts/merge_datasets.py
+python data/merge_datasets.py
 
 echo "Uploading to HDFS..."
-./scripts/upload_to_hdfs.sh
+./data/upload_to_hdfs.sh
 
+docker exec infrastructure-master-1 \
+    hdfs dfs -ls -R /telepulse
+
+# copying processing scripts to the master node
+docker exec infrastructure-master-1 mkdir -p /home/jupyter/telepulse
+docker cp processing infrastructure-master-1:/home/jupyter/telepulse/
+
+# running the pipeline
+echo "Running the TelePulse spark pipeline..."
+docker exec infrastructure-master-1 \
+    spark-submit /home/jupyter/telepulse/processing/spark/pipeline.py
+
+# running the hive scripts to create views
+echo "Creating Hive views..."
+
+docker exec infrastructure-master-1 hive -f \
+    /home/jupyter/telepulse/processing/hive/create_views.hql
+
+docker exec infrastructure-master-1 hive -f \
+    /home/jupyter/telepulse/processing/hive/validation.hql
+
+
+
+echo "TelePulse pipeline completed successfully!"
