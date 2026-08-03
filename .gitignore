@@ -1,5 +1,4 @@
 # Python
-.venv/
 __pycache__/
 *.py[cod]
 
@@ -23,12 +22,9 @@ metastore_db/
 *.log
 
 # Datasets
-data/raw/*
+data/archive/*
 data/merged/*
 
 # Keep the directories
-!data/raw/.gitkeep
-!data/merged/.gitkeep
-
-# Keep static map files
-!data/merged/*.geojson
+!data/archive/.gitkeep
+!data/bootstrap/.gitkeep

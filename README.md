@@ -1,134 +1,311 @@
 # TelePulse
 
-## Prerequisites
+A production-inspired batch data engineering platform built with **Hadoop**, **Spark**, **Hive**, and **Docker** for processing large-scale mobile network activity data.
+
+TelePulse transforms historical telecom activity datasets into an analytics-ready data warehouse using a modular Spark ETL pipeline running on a distributed Hadoop cluster.
+
+---
+
+# Features
+
+- Dockerized Hadoop ecosystem
+- HDFS data lake
+- Spark batch ETL pipeline
+- Hive data warehouse
+- Historical dataset bootstrap
+- Data validation
+- Data transformation
+- Analytics views
+- Modular processing package
+- Deployment script for processing code
+- Foundation for incremental batch ingestion
+
+---
+
+# Architecture
+
+```text
+                    Local Machine
+                    ─────────────
+
+          Processing Code        Historical Dataset
+                 │                      │
+                 ▼                      ▼
+     deploy_processing.sh     upload_archive.sh
+                 │                      │
+                 ▼                      ▼
+        Hadoop Master Container      HDFS
+                 │                      │
+                 └──────────┬───────────┘
+                            ▼
+                     bootstrap.sh
+                            │
+                            ▼
+                  Spark Validation
+                            │
+                            ▼
+                Spark Transformation
+                            │
+                            ▼
+                  Hive Warehouse
+                            │
+                            ▼
+                    Analytics Views
+```
+
+---
+
+# Technology Stack
+
+- Python
 - Docker
 - Docker Compose
-- Python3
+- Hadoop HDFS
+- YARN
+- Apache Spark
+- Apache Hive
 
+---
 
-## Dataset
+# Project Structure
 
-The TelePulse project uses the Telecom Italia Big Data Challenge dataset.
-
-    https://www.kaggle.com/datasets/marcodena/mobile-phone-activity
-
-Download the dataset and extract all files into:
-
-```
-data/raw/
-```
-
-Your folder should look similar to:
-
-```
-data/
-├── raw/
-│   ├── ISTAT_census_variables_2011.csv
-│   ├── sms-call-internet-mi-2013-11-01.csv
-│   ├── ...
-│   ├── mi-to-provinces-2013-11-01.csv
-│   ├── ...
+```text
+TelePulse/
 │
-├── merged/
-│   ├── Italian_provinces.geojson
-│   └── milano-grid.geojson
+├── api/
+│
+├── data/
+│   ├── archive/
+│   ├── incoming/
+│   ├── processed/
+│   └── rejected/
+│
+├── docs/
+│
+├── infrastructure/
+│
+├── processing/
+│   ├── bootstrap/
+│   ├── common/
+│   ├── hive/
+│   └── ingestion/
+│
+├── scripts/
+│
+└── README.md
 ```
 
-> The merged CSV files are generated automatically by the bootstrap script.
+---
 
+# Prerequisites
 
+- Docker
+- Docker Compose
 
-## Setup
+---
+
+# Dataset
+
+TelePulse uses the **Telecom Italia Big Data Challenge** dataset.
+
+https://www.kaggle.com/datasets/marcodena/mobile-phone-activity
+
+Download the dataset and extract the required files into:
+
+```text
+data/archive/
+```
+
+Example:
+
+```text
+data/
+└── archive/
+    ├── ISTAT_census_variables_2011.csv
+    ├── Italian_provinces.geojson
+    ├── milano-grid.geojson
+    ├── sms-call-internet-mi-2013-11-01.csv
+    ├── sms-call-internet-mi-2013-11-02.csv
+    ├── ...
+    ├── mi-to-provinces-2013-11-01.csv
+    ├── mi-to-provinces-2013-11-02.csv
+    └── ...
+```
+
+---
+
+# Getting Started
+
+Clone the repository:
 
 ```bash
 git clone https://github.com/Doha-Ahmed-E/TelePulse.git
 cd TelePulse
-chmod +x scripts/bootstrap.sh
+```
+
+Start the Hadoop cluster:
+
+```bash
+docker compose up -d
+```
+
+Deploy the processing package into the master container:
+
+```bash
+./scripts/deploy_processing.sh
+```
+
+Upload the historical archive to HDFS:
+
+```bash
+./scripts/upload_archive.sh
+```
+
+Initialize the warehouse:
+
+```bash
 ./scripts/bootstrap.sh
 ```
 
-The bootstrap script automatically:
-
-- Creates a Python virtual environment
-- Installs Python dependencies
-- Builds all Docker images
-- Starts the Hadoop/Spark/Hive cluster
-- Merges the raw datasets
-- Uploads the datasets to HDFS
-- Executes the Spark analytics pipeline
-
-
-
-## Opening the Hadoop container
+Verify the deployment:
 
 ```bash
-docker exec -it infrastructure-master-1 bash
+./scripts/check.sh
 ```
 
-## Verifying the project
+---
 
-Inside the container:
+# Available Scripts
 
-```bash
-hdfs dfs -ls /telepulse
+## deploy_processing.sh
+
+Copies the latest `processing/` package from the local project into the Hadoop master container.
+
+Run this script whenever processing code changes.
+
+---
+
+## upload_archive.sh
+
+Uploads the historical dataset from `data/archive/` into HDFS.
+
+Destination:
+
+```text
+/telepulse/archive
 ```
 
+---
+
+## bootstrap.sh
+
+Initializes the TelePulse warehouse.
+
+The script performs the following steps:
+
+1. Reads historical datasets from HDFS
+2. Validates source schemas
+3. Applies data transformations
+4. Creates Hive warehouse tables
+5. Loads transformed data
+6. Creates analytics views
+
+---
+
+## check.sh
+
+Runs validation queries to verify that the warehouse was created successfully.
+
+---
+
+# Verifying the Warehouse
+
+Open a Hive shell:
+
 ```bash
-hive
+docker exec -it infrastructure-master-1 hive
 ```
 
 ```sql
 USE telepulse;
+
 SHOW TABLES;
+
 SHOW VIEWS;
 ```
 
-Expected tables:
+You should see the warehouse tables together with the analytics views created during the bootstrap process.
 
-- urban_vitality
-- land_use_classification
-- spatial_diversity
-
-Expected views:
-
-- vw_dashboard
-- vw_dashboard_map
-- vw_activity_summary
-- vw_activity_ranking
-- vw_business_zones
-- vw_residential_zones
-- vw_cell_summary
-- vw_high_diversity
-- vw_internet_hotspots
-- vw_sms_hotspots
-- vw_call_hotspots
-- vw_kpi_summary
-- vw_land_use
-- vw_spatial_diversity
-- vw_urban_vitality
-
-## Power BI Connection
-
-Inside the container: 
+You can also verify that the historical archive exists in HDFS:
 
 ```bash
-start-thriftserver.sh
+docker exec infrastructure-master-1 \
+hdfs dfs -ls -R /telepulse
 ```
 
-```bash
-hiveserver2
+---
+
+# Current Pipeline
+
+```text
+Historical CSV Files
+        │
+        ▼
+upload_archive.sh
+        │
+        ▼
+HDFS (/telepulse/archive)
+        │
+        ▼
+Spark Bootstrap
+        │
+        ├── Read CSV files
+        ├── Validate schema
+        ├── Transform data
+        ├── Create Hive tables
+        ├── Load warehouse
+        └── Create analytics views
+                │
+                ▼
+        Hive Data Warehouse
 ```
 
-### Verify Spark Thrift Server 
-in another container terminal:
+---
 
-```bash
-beeline -u jdbc:hive2://localhost:10000
-```
-Power BI settings:
+# Current Status
 
-- Host: localhost
-- Port: 10000
-- Database: telepulse
-- Authentication: None
+✅ Dockerized Hadoop cluster
 
+✅ HDFS storage
+
+✅ Spark ETL pipeline
+
+✅ Hive warehouse
+
+✅ Analytics views
+
+✅ Historical bootstrap pipeline
+
+✅ Modular processing package
+
+---
+
+# Roadmap
+
+The next development phase introduces incremental batch ingestion.
+
+Planned additions include:
+
+- Upload API
+- Incoming data pipeline
+- Schema validation for uploaded files
+- Accepted / rejected file workflow
+- Incremental Spark ingestion
+- Analytics REST API
+- Dashboard integration
+
+---
+
+# License
+
+This project is intended for educational and portfolio purposes.
