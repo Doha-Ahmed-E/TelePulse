@@ -2,7 +2,11 @@
 
 set -euo pipefail
 
-CONTAINER="infrastructure-master-1"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. && pwd)"
+
+CONTAINER=$(docker compose \
+    -f "$ROOT/deployment/docker-compose.yml" \
+    ps -q master)
 
 docker exec "$CONTAINER" \
     hive \

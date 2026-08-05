@@ -309,3 +309,15 @@ Planned additions include:
 # License
 
 This project is intended for educational and portfolio purposes.
+
+
+
+--- 
+this is recent change
+
+cd TelePulse
+
+make base      # one-time
+make up
+./scripts/bootstrap.sh
+./scripts/run_ingestion.sh
