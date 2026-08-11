@@ -140,38 +140,11 @@ services:
         ipv4_address: 172.28.1.5
 
 
-  pipeline:
-    build:
-      context: ./pipeline
-    image: telepulse-pipeline
-    hostname: pipeline
-
-    depends_on:
-      - master
-
-    ports:
-      - "8001:8001"
-
-    volumes:
-      - ../pipeline:/app
-      - ../processing:/home/jupyter/telepulse/processing
-      - ../scripts:/home/jupyter/telepulse/scripts
-      - ../data/uploads:/home/jupyter/telepulse/data/uploads
-
-    restart: unless-stopped
-
-    networks:
-      sparknet:
-
-
   api:
     build:
       context: ./api
     image: telepulse-api
     hostname: api
-
-    depends_on:
-      - pipeline
 
     ports:
       - "8000:8000"

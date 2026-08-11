@@ -23,7 +23,10 @@ metastore_db/
 
 # Datasets
 data/archive/*
-data/merged/*
+data/uploads/incoming/*.csv
+data/uploads/processed/*.csv
+data/uploads/rejected/*.csv
+
 
 # Keep the directories
 !data/archive/.gitkeep

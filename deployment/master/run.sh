@@ -44,6 +44,21 @@ then
   hdfs dfs -put "$SPARK_HOME"/jars/* "$SPARK_JARS_HDFS_PATH"/
 fi
 
+echo "Initializing TelePulse HDFS directories..."
+
+until hdfs dfs -test -d /telepulse/raw
+do
+  if hdfs dfs -mkdir -p /telepulse/raw 2>/dev/null
+  then
+    break
+  fi
+
+  echo "Waiting for HDFS to become ready..."
+  sleep 2
+done
+
+echo "HDFS directory /telepulse/raw is ready."
+
 echo "Starting Spark master node..."
 spark-class org.apache.spark.deploy.master.Master \
     --host master \

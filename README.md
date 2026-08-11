@@ -321,3 +321,18 @@ make base      # one-time
 make up
 ./scripts/bootstrap.sh
 ./scripts/run_ingestion.sh
+
+### HDFS Safe Mode
+
+On the first startup, Hadoop may temporarily keep the NameNode in safe mode while the DataNodes finish registering.
+
+If an ingestion attempt fails with:
+
+Name node is in safe mode
+
+wait a few seconds and retry the upload. Once the DataNodes have registered, HDFS will leave safe mode automatically and ingestion will proceed normally.
+
+You can check the current state with:
+
+docker compose -f deployment/docker-compose.yml exec master \
+hdfs dfsadmin -safemode get
