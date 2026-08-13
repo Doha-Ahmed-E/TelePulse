@@ -1,338 +1,170 @@
 # TelePulse
 
-A production-inspired batch data engineering platform built with **Hadoop**, **Spark**, **Hive**, and **Docker** for processing large-scale mobile network activity data.
+A production-inspired batch data engineering platform built with **Hadoop, Spark, Hive, Docker, and FastAPI** for processing large-scale mobile network activity data.
 
-TelePulse transforms historical telecom activity datasets into an analytics-ready data warehouse using a modular Spark ETL pipeline running on a distributed Hadoop cluster.
-
----
-
-# Features
-
-- Dockerized Hadoop ecosystem
-- HDFS data lake
-- Spark batch ETL pipeline
-- Hive data warehouse
-- Historical dataset bootstrap
-- Data validation
-- Data transformation
-- Analytics views
-- Modular processing package
-- Deployment script for processing code
-- Foundation for incremental batch ingestion
-
----
-
-# Architecture
+## Architecture
 
 ```text
-                    Local Machine
-                    ─────────────
+Historical CSVs
+      │
+      ▼
+     HDFS
+      │
+      ▼
+   Spark ETL
+      │
+      ├── Validate
+      ├── Transform
+      └── Load
+            │
+            ▼
+     Hive Warehouse
+            │
+            ▼
+      Analytics Views
+            │
+            ▼
+       FastAPI API
+            │
+            ▼
+        Frontend
+````
 
-          Processing Code        Historical Dataset
-                 │                      │
-                 ▼                      ▼
-     deploy_processing.sh     upload_archive.sh
-                 │                      │
-                 ▼                      ▼
-        Hadoop Master Container      HDFS
-                 │                      │
-                 └──────────┬───────────┘
-                            ▼
-                     bootstrap.sh
-                            │
-                            ▼
-                  Spark Validation
-                            │
-                            ▼
-                Spark Transformation
-                            │
-                            ▼
-                  Hive Warehouse
-                            │
-                            ▼
-                    Analytics Views
-```
+## Tech Stack
 
----
+* Python
+* Docker / Docker Compose
+* Hadoop HDFS
+* YARN
+* Apache Spark
+* Apache Hive
+* FastAPI
+* JavaScript / HTML / CSS
 
-# Technology Stack
-
-- Python
-- Docker
-- Docker Compose
-- Hadoop HDFS
-- YARN
-- Apache Spark
-- Apache Hive
-
----
-
-# Project Structure
+## Project Structure
 
 ```text
 TelePulse/
-│
 ├── api/
-│
 ├── data/
 │   ├── archive/
-│   ├── incoming/
-│   ├── processed/
-│   └── rejected/
-│
+│   └── uploads/
+│       ├── incoming/
+│       ├── processed/
+│       └── rejected/
 ├── docs/
-│
 ├── infrastructure/
-│
 ├── processing/
 │   ├── bootstrap/
 │   ├── common/
 │   ├── hive/
 │   └── ingestion/
-│
 ├── scripts/
-│
+├── frontend/
+├── Makefile
 └── README.md
 ```
 
----
+## Getting Started
 
-# Prerequisites
+```bash
+cd TelePulse
 
-- Docker
-- Docker Compose
+make base      # One-time Docker base image build
+make up        # Start the Hadoop/Spark/Hive cluster
 
----
+./scripts/bootstrap.sh
+```
 
-# Dataset
+The bootstrap process loads the historical dataset into the Hive warehouse.
 
-TelePulse uses the **Telecom Italia Big Data Challenge** dataset.
+### Incremental Ingestion
 
-https://www.kaggle.com/datasets/marcodena/mobile-phone-activity
+Uploaded files are placed in:
 
-Download the dataset and extract the required files into:
+```text
+data/uploads/incoming/
+```
+
+They can be processed with:
+
+```bash
+./scripts/run_ingestion.sh <filename>
+```
+
+Successfully processed files are moved to:
+
+```text
+data/uploads/processed/
+```
+
+Failed files are moved to:
+
+```text
+data/uploads/rejected/
+```
+
+The project also includes an upload API and a frontend upload interface for submitting new datasets.
+
+## Dataset
+
+TelePulse uses the **Telecom Italia Big Data Challenge** dataset:
+
+[https://www.kaggle.com/datasets/marcodena/mobile-phone-activity](https://www.kaggle.com/datasets/marcodena/mobile-phone-activity)
+
+Place the historical files under:
 
 ```text
 data/archive/
 ```
 
-Example:
+## HDFS Safe Mode
+
+On the first startup, Hadoop may temporarily keep the NameNode in safe mode while DataNodes register.
+
+If ingestion fails with:
 
 ```text
-data/
-└── archive/
-    ├── ISTAT_census_variables_2011.csv
-    ├── Italian_provinces.geojson
-    ├── milano-grid.geojson
-    ├── sms-call-internet-mi-2013-11-01.csv
-    ├── sms-call-internet-mi-2013-11-02.csv
-    ├── ...
-    ├── mi-to-provinces-2013-11-01.csv
-    ├── mi-to-provinces-2013-11-02.csv
-    └── ...
-```
-
----
-
-# Getting Started
-
-Clone the repository:
-
-```bash
-git clone https://github.com/Doha-Ahmed-E/TelePulse.git
-cd TelePulse
-```
-
-Start the Hadoop cluster:
-
-```bash
-docker compose up -d
-```
-
-Deploy the processing package into the master container:
-
-```bash
-./scripts/deploy_processing.sh
-```
-
-Upload the historical archive to HDFS:
-
-```bash
-./scripts/upload_archive.sh
-```
-
-Initialize the warehouse:
-
-```bash
-./scripts/bootstrap.sh
-```
-
-Verify the deployment:
-
-```bash
-./scripts/check.sh
-```
-
----
-
-# Available Scripts
-
-## deploy_processing.sh
-
-Copies the latest `processing/` package from the local project into the Hadoop master container.
-
-Run this script whenever processing code changes.
-
----
-
-## upload_archive.sh
-
-Uploads the historical dataset from `data/archive/` into HDFS.
-
-Destination:
-
-```text
-/telepulse/archive
-```
-
----
-
-## bootstrap.sh
-
-Initializes the TelePulse warehouse.
-
-The script performs the following steps:
-
-1. Reads historical datasets from HDFS
-2. Validates source schemas
-3. Applies data transformations
-4. Creates Hive warehouse tables
-5. Loads transformed data
-6. Creates analytics views
-
----
-
-## check.sh
-
-Runs validation queries to verify that the warehouse was created successfully.
-
----
-
-# Verifying the Warehouse
-
-Open a Hive shell:
-
-```bash
-docker exec -it infrastructure-master-1 hive
-```
-
-```sql
-USE telepulse;
-
-SHOW TABLES;
-
-SHOW VIEWS;
-```
-
-You should see the warehouse tables together with the analytics views created during the bootstrap process.
-
-You can also verify that the historical archive exists in HDFS:
-
-```bash
-docker exec infrastructure-master-1 \
-hdfs dfs -ls -R /telepulse
-```
-
----
-
-# Current Pipeline
-
-```text
-Historical CSV Files
-        │
-        ▼
-upload_archive.sh
-        │
-        ▼
-HDFS (/telepulse/archive)
-        │
-        ▼
-Spark Bootstrap
-        │
-        ├── Read CSV files
-        ├── Validate schema
-        ├── Transform data
-        ├── Create Hive tables
-        ├── Load warehouse
-        └── Create analytics views
-                │
-                ▼
-        Hive Data Warehouse
-```
-
----
-
-# Current Status
-
-✅ Dockerized Hadoop cluster
-
-✅ HDFS storage
-
-✅ Spark ETL pipeline
-
-✅ Hive warehouse
-
-✅ Analytics views
-
-✅ Historical bootstrap pipeline
-
-✅ Modular processing package
-
----
-
-# Roadmap
-
-The next development phase introduces incremental batch ingestion.
-
-Planned additions include:
-
-- Upload API
-- Incoming data pipeline
-- Schema validation for uploaded files
-- Accepted / rejected file workflow
-- Incremental Spark ingestion
-- Analytics REST API
-- Dashboard integration
-
----
-
-# License
-
-This project is intended for educational and portfolio purposes.
-
-
-
---- 
-this is recent change
-
-cd TelePulse
-
-make base      # one-time
-make up
-./scripts/bootstrap.sh
-./scripts/run_ingestion.sh
-
-### HDFS Safe Mode
-
-On the first startup, Hadoop may temporarily keep the NameNode in safe mode while the DataNodes finish registering.
-
-If an ingestion attempt fails with:
-
 Name node is in safe mode
+```
 
-wait a few seconds and retry the upload. Once the DataNodes have registered, HDFS will leave safe mode automatically and ingestion will proceed normally.
+wait a few seconds and retry.
 
-You can check the current state with:
+Check the current state with:
 
+```bash
 docker compose -f deployment/docker-compose.yml exec master \
 hdfs dfsadmin -safemode get
+```
+
+If necessary:
+
+```bash
+docker compose -f deployment/docker-compose.yml exec master \
+hdfs dfs -chmod 1777 /tmp
+```
+
+## Current Status
+
+*  Dockerized Hadoop/Spark/Hive cluster
+*  HDFS data lake
+*  Spark ETL pipeline
+*  Hive warehouse and analytics views
+*  Historical bootstrap
+*  Incremental ingestion
+*  Schema validation and transformation
+*  Processed/rejected file workflow
+*  Upload API
+*  Analytics API
+*  Frontend dashboard
+
+## Roadmap
+
+* Improve analytics query performance
+* Complete the dashboard
+* Improve ingestion monitoring and error handling
+* Further refine the production-style batch architecture
+
+## License
+
+Educational and portfolio project.

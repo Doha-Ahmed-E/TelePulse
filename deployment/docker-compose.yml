@@ -149,6 +149,9 @@ services:
     ports:
       - "8000:8000"
 
+    environment:
+      - HADOOP_USER_NAME=jupyter
+
     volumes:
       - ../api:/app
       - ../data/uploads:/data/uploads

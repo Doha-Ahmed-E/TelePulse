@@ -1,3 +1,6 @@
 fastapi
 uvicorn
 python-multipart
+PyHive
+thrift
+thrift_sasl

@@ -50,9 +50,22 @@
     </property>
     <property>
         <name>hive.stats.retries.wait</name>
-        <value>3000</value>
-    </property>    <property>
-        <name>hive.security.authorization.manager</name>
-        <value>org.apache.hadoop.hive.ql.security.authorization.DefaultHiveAuthorizationProvider</value>
+        <value>3000</value>    
     </property>
+    <property>
+        <name>hive.server2.thrift.bind.host</name>
+        <value>0.0.0.0</value>
+    </property>
+    <property>
+        <name>hive.server2.thrift.port</name>
+        <value>10000</value>
+    </property>
+    <property>
+        <name>hive.server2.transport.mode</name>
+        <value>binary</value>
+    </property>
+    <property>
+        <name>hive.privilege.synchronizer</name>
+        <value>false</value>
+    </property>  
 </configuration>

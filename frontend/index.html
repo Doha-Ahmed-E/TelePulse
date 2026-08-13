@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TelePulse Analytics</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">T</div>
+      <div>
+        <h1>TelePulse</h1>
+        <span>Analytics</span>
+      </div>
+    </div>
+
+    <nav>
+      <button class="nav-item active" data-section="overview">Overview</button>
+      <button class="nav-item" data-section="cells">Cell Analytics</button>
+      <button class="nav-item" data-section="hourly">Hourly Activity</button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <span class="status-dot"></span>
+      <span>API connected</span>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">BIG DATA ANALYTICS</p>
+        <h2 id="page-title">Network Overview</h2>
+      </div>
+      <div class="topbar-actions">
+        <button id="upload-btn" class="upload-btn">↑ Upload Data</button>
+        <button id="refresh-btn" class="refresh-btn">↻ Refresh</button>
+      </div>
+    </header>
+
+    <section id="overview" class="section active">
+      <div class="section-intro">
+        <p>Aggregated activity across the TelePulse network.</p>
+      </div>
+
+      <div id="overview-cards" class="cards"></div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <div>
+            <h3>Activity by Province</h3>
+            <p>SMS, calls and internet activity</p>
+          </div>
+        </div>
+        <div class="chart-wrap large"><canvas id="province-chart"></canvas></div>
+      </div>
+    </section>
+
+    <section id="cells" class="section">
+      <div class="section-intro">
+        <p>Cell-level activity and derived urban analytics.</p>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <div>
+            <h3>Cell Analytics</h3>
+            <p>Aggregated metrics for every cell</p>
+          </div>
+          <input id="cell-search" class="search" placeholder="Search cell..." />
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Cell</th>
+                <th>SMS</th>
+                <th>Calls</th>
+                <th>Internet</th>
+                <th>Vitality</th>
+                <th>Land Use</th>
+                <th>Diversity</th>
+              </tr>
+            </thead>
+            <tbody id="cells-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="hourly" class="section">
+      <div class="section-intro">
+        <p>Understand how network activity changes throughout the day.</p>
+      </div>
+
+      <div class="toolbar">
+        <label>
+          Province
+          <select id="province-select">
+            <option value="">All provinces</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <div>
+            <h3>Hourly Activity</h3>
+            <p>Traffic distribution across the day</p>
+          </div>
+        </div>
+        <div class="chart-wrap large"><canvas id="hourly-chart"></canvas></div>
+      </div>
+    </section>
+
+    <div id="upload-modal" class="modal hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div>
+            <h3>Upload TelePulse Data</h3>
+            <p>Upload a CSV file to the TelePulse ingestion pipeline.</p>
+          </div>
+          <button id="close-upload" class="close-btn">×</button>
+        </div>
+
+        <form id="upload-form">
+          <label class="file-drop">
+            <input id="upload-file" type="file" accept=".csv" required />
+            <span class="file-icon">↑</span>
+            <strong id="file-name">Choose a CSV file</strong>
+            <small>CSV files only</small>
+          </label>
+
+          <div id="upload-status" class="upload-status hidden"></div>
+
+          <div class="modal-actions">
+            <button type="button" id="cancel-upload" class="refresh-btn">Cancel</button>
+            <button type="submit" class="upload-btn">Upload</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="error" class="error hidden"></div>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
