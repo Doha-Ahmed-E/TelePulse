@@ -1,84 +1,135 @@
 # TelePulse
 
-A production-inspired batch data engineering platform built with **Hadoop, Spark, Hive, Docker, and FastAPI** for processing large-scale mobile network activity data.
+A production-inspired batch data engineering platform built with **Hadoop, Spark, Hive, and Docker** for processing large-scale mobile network activity data.
+
+TelePulse ingests historical and newly uploaded telecom datasets, validates and transforms them with Spark, stores them in HDFS/Hive, and exposes analytics through a REST API.
+
+---
 
 ## Architecture
 
 ```text
-Historical CSVs
-      │
-      ▼
-     HDFS
-      │
-      ▼
-   Spark ETL
-      │
-      ├── Validate
-      ├── Transform
-      └── Load
-            │
-            ▼
-     Hive Warehouse
-            │
-            ▼
-      Analytics Views
-            │
-            ▼
-       FastAPI API
-            │
-            ▼
-        Frontend
+                    TelePulse
+                        │
+          ┌─────────────┴─────────────┐
+          │                           │
+   Historical Data              Upload API
+          │                           │
+          ▼                           ▼
+   HDFS Archive              Incoming Directory
+                                      │
+                                      ▼
+                                  File Watcher
+                                      │
+                                      ▼
+                               Spark Ingestion
+                                      │
+                              ┌───────┴───────┐
+                              │               │
+                           Processed       Rejected
+                              │               │
+                              ▼               ▼
+                            HDFS            HDFS
+                              │
+                              ▼
+                         Hive Warehouse
+                              │
+                              ▼
+                        Analytics API
 ````
 
-## Tech Stack
+---
+
+## Technology Stack
 
 * Python
-* Docker / Docker Compose
+* FastAPI
+* Docker & Docker Compose
 * Hadoop HDFS
-* YARN
 * Apache Spark
 * Apache Hive
-* FastAPI
-* JavaScript / HTML / CSS
+* PyHive
+
+---
 
 ## Project Structure
 
 ```text
 TelePulse/
+│
 ├── api/
+│   ├── routes/
+│   └── services/
+│
 ├── data/
 │   ├── archive/
 │   └── uploads/
 │       ├── incoming/
 │       ├── processed/
 │       └── rejected/
+│
+├── deployment/
+│
 ├── docs/
+│
 ├── infrastructure/
+│
 ├── processing/
 │   ├── bootstrap/
 │   ├── common/
 │   ├── hive/
 │   └── ingestion/
+│
 ├── scripts/
-├── frontend/
+│
 ├── Makefile
 └── README.md
 ```
+
+---
+
+## Dataset
+
+TelePulse uses the **Telecom Italia Big Data Challenge** dataset.
+
+[https://www.kaggle.com/datasets/marcodena/mobile-phone-activity](https://www.kaggle.com/datasets/marcodena/mobile-phone-activity)
+
+Historical datasets should be placed in:
+
+```text
+data/archive/
+```
+
+---
 
 ## Getting Started
 
 ```bash
 cd TelePulse
 
-make base      # One-time Docker base image build
-make up        # Start the Hadoop/Spark/Hive cluster
-
+make base      # one-time setup
+make up
 ./scripts/bootstrap.sh
 ```
 
-The bootstrap process loads the historical dataset into the Hive warehouse.
+The bootstrap process initializes the Hive warehouse and analytics views from the historical data.
 
-### Incremental Ingestion
+Check HDFS with:
+
+```bash
+docker compose -f deployment/docker-compose.yml exec master \
+hdfs dfs -ls -R /telepulse
+```
+
+---
+
+## Incremental Ingestion
+
+New datasets can be uploaded through the API:
+
+```text
+POST /upload
+```
 
 Uploaded files are placed in:
 
@@ -86,49 +137,44 @@ Uploaded files are placed in:
 data/uploads/incoming/
 ```
 
-They can be processed with:
+A background watcher monitors this directory and automatically triggers the Spark ingestion pipeline when a new supported CSV file appears.
+
+The ingestion pipeline:
+
+1. Detects the uploaded file
+2. Validates the dataset type and schema
+3. Uploads the file to HDFS
+4. Processes it with Spark
+5. Appends the data to the Hive warehouse
+6. Moves successful files to `processed/`
+7. Moves failed files to `rejected/`
+
+You can also trigger ingestion manually:
 
 ```bash
 ./scripts/run_ingestion.sh <filename>
 ```
 
-Successfully processed files are moved to:
+---
+
+## Analytics API
+
+The backend exposes analytics endpoints for the processed warehouse data:
 
 ```text
-data/uploads/processed/
+GET /analytics/overview
+GET /analytics/cells
+GET /analytics/hourly
+GET /analytics/hourly?province=<province>
 ```
 
-Failed files are moved to:
+The API retrieves the latest data from Hive, so newly ingested files are reflected in subsequent analytics queries.
 
-```text
-data/uploads/rejected/
-```
-
-The project also includes an upload API and a frontend upload interface for submitting new datasets.
-
-## Dataset
-
-TelePulse uses the **Telecom Italia Big Data Challenge** dataset:
-
-[https://www.kaggle.com/datasets/marcodena/mobile-phone-activity](https://www.kaggle.com/datasets/marcodena/mobile-phone-activity)
-
-Place the historical files under:
-
-```text
-data/archive/
-```
+---
 
 ## HDFS Safe Mode
 
 On the first startup, Hadoop may temporarily keep the NameNode in safe mode while DataNodes register.
-
-If ingestion fails with:
-
-```text
-Name node is in safe mode
-```
-
-wait a few seconds and retry.
 
 Check the current state with:
 
@@ -137,34 +183,36 @@ docker compose -f deployment/docker-compose.yml exec master \
 hdfs dfsadmin -safemode get
 ```
 
-If necessary:
+If ingestion fails because the NameNode is in safe mode, wait a few seconds and retry.
 
-```bash
-docker compose -f deployment/docker-compose.yml exec master \
-hdfs dfs -chmod 1777 /tmp
-```
+---
 
 ## Current Status
 
-*  Dockerized Hadoop/Spark/Hive cluster
+*  Dockerized Hadoop cluster
 *  HDFS data lake
 *  Spark ETL pipeline
-*  Hive warehouse and analytics views
+*  Hive data warehouse
 *  Historical bootstrap
+*  Schema validation
+*  Data transformation
 *  Incremental ingestion
-*  Schema validation and transformation
-*  Processed/rejected file workflow
 *  Upload API
-*  Analytics API
-*  Frontend dashboard
+*  Automatic folder watcher
+*  Processed/rejected file workflow
+*  Analytics REST API
+
+---
 
 ## Roadmap
 
 * Improve analytics query performance
-* Complete the dashboard
-* Improve ingestion monitoring and error handling
-* Further refine the production-style batch architecture
+* Add stronger ingestion monitoring and error reporting
+* Improve API response optimization
+* Add automated tests
+
+---
 
 ## License
 
-Educational and portfolio project.
+This project is intended for educational and portfolio purposes.
