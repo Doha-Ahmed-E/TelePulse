@@ -1,51 +1,58 @@
 #!/usr/bin/env bash
+
+# Bootstrap TelePulse by:
+#   1. Copying the historical archive into the master container
+#   2. Uploading it to HDFS
+#   3. Running the Spark bootstrap job
+
 set -euo pipefail
 
-# venv and install dependencies
-python3 -m venv .venv
-source .venv/bin/activate
-pip3 install --upgrade pip
-pip3 install -r requirements.txt
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. && pwd)"
 
-echo "Environment ready."
+CONTAINER=$(docker compose \
+    -f "$ROOT/deployment/docker-compose.yml" \
+    ps -q master)
 
-# build and start the cluster
-echo "Building images..."
-./scripts/build_images.sh
+if [ -z "$CONTAINER" ]; then
+    echo "Master container is not running."
+    echo "Start the platform first:"
+    echo "  cd deployment && docker compose up -d"
+    exit 1
+fi
 
-echo "Starting cluster..."
-docker compose -f infrastructure/docker-compose.yml up -d
-echo "Waiting for Hadoop..."
-sleep 30
+TEMP_DIR="/tmp/telepulse/archive"
+HDFS_DIR="/telepulse/archive"
 
-# merge datasets and upload to HDFS
-echo "Merging datasets..."
-python3 data/merge_datasets.py
+echo "Cleaning previous temporary archive..."
+docker exec --user root "$CONTAINER" rm -rf /tmp/telepulse
 
-echo "Uploading to HDFS..."
-./data/upload_to_hdfs.sh
+echo "Creating temporary directory..."
+docker exec "$CONTAINER" mkdir -p "$TEMP_DIR"
 
-docker exec infrastructure-master-1 \
-    hdfs dfs -ls -R /telepulse
+echo "Copying archive into container..."
+docker cp \
+    "$ROOT/data/archive/." \
+    "$CONTAINER:$TEMP_DIR"
 
-# copying processing scripts to the master node
-docker exec infrastructure-master-1 mkdir -p /home/jupyter/telepulse
-docker cp processing infrastructure-master-1:/home/jupyter/telepulse/
+echo "Creating HDFS archive directory..."
+docker exec  "$CONTAINER" bash -lc "
+hdfs dfs -mkdir -p $HDFS_DIR
+"
 
-# running the pipeline
-echo "Running the TelePulse spark pipeline..."
-docker exec infrastructure-master-1 \
-    spark-submit /home/jupyter/telepulse/processing/spark/pipeline.py
+echo "Uploading archive to HDFS..."
+docker exec "$CONTAINER" bash -lc "
+hdfs dfs -put -f $TEMP_DIR/* $HDFS_DIR
+"
 
-# running the hive scripts to create views
-echo "Creating Hive views..."
+echo "Cleaning temporary files..."
+docker exec "$CONTAINER" rm -rf /tmp/telepulse
 
-docker exec infrastructure-master-1 hive -f \
-    /home/jupyter/telepulse/processing/hive/create_views.hql
+echo "Running Spark bootstrap..."
 
-docker exec infrastructure-master-1 hive -f \
-    /home/jupyter/telepulse/processing/hive/validation.hql
+docker exec "$CONTAINER" bash -lc '
+cd /home/jupyter/telepulse
+PYTHONPATH=/home/jupyter/telepulse \
+spark-submit processing/bootstrap/bootstrap.py
+'
 
-
-
-echo "TelePulse pipeline completed successfully!"
+echo "Bootstrap completed successfully."

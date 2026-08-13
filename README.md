@@ -1,134 +1,218 @@
 # TelePulse
 
-## Prerequisites
-- Docker
-- Docker Compose
-- Python3
+A production-inspired batch data engineering platform built with **Hadoop, Spark, Hive, and Docker** for processing large-scale mobile network activity data.
 
+TelePulse ingests historical and newly uploaded telecom datasets, validates and transforms them with Spark, stores them in HDFS/Hive, and exposes analytics through a REST API.
+
+---
+
+## Architecture
+
+```text
+                    TelePulse
+                        │
+          ┌─────────────┴─────────────┐
+          │                           │
+   Historical Data              Upload API
+          │                           │
+          ▼                           ▼
+   HDFS Archive              Incoming Directory
+                                      │
+                                      ▼
+                                  File Watcher
+                                      │
+                                      ▼
+                               Spark Ingestion
+                                      │
+                              ┌───────┴───────┐
+                              │               │
+                           Processed       Rejected
+                              │               │
+                              ▼               ▼
+                            HDFS            HDFS
+                              │
+                              ▼
+                         Hive Warehouse
+                              │
+                              ▼
+                        Analytics API
+````
+
+---
+
+## Technology Stack
+
+* Python
+* FastAPI
+* Docker & Docker Compose
+* Hadoop HDFS
+* Apache Spark
+* Apache Hive
+* PyHive
+
+---
+
+## Project Structure
+
+```text
+TelePulse/
+│
+├── api/
+│   ├── routes/
+│   └── services/
+│
+├── data/
+│   ├── archive/
+│   └── uploads/
+│       ├── incoming/
+│       ├── processed/
+│       └── rejected/
+│
+├── deployment/
+│
+├── docs/
+│
+├── infrastructure/
+│
+├── processing/
+│   ├── bootstrap/
+│   ├── common/
+│   ├── hive/
+│   └── ingestion/
+│
+├── scripts/
+│
+├── Makefile
+└── README.md
+```
+
+---
 
 ## Dataset
 
-The TelePulse project uses the Telecom Italia Big Data Challenge dataset.
+TelePulse uses the **Telecom Italia Big Data Challenge** dataset.
 
-    https://www.kaggle.com/datasets/marcodena/mobile-phone-activity
+[https://www.kaggle.com/datasets/marcodena/mobile-phone-activity](https://www.kaggle.com/datasets/marcodena/mobile-phone-activity)
 
-Download the dataset and extract all files into:
+Historical datasets should be placed in:
 
-```
-data/raw/
-```
-
-Your folder should look similar to:
-
-```
-data/
-├── raw/
-│   ├── ISTAT_census_variables_2011.csv
-│   ├── sms-call-internet-mi-2013-11-01.csv
-│   ├── ...
-│   ├── mi-to-provinces-2013-11-01.csv
-│   ├── ...
-│
-├── merged/
-│   ├── Italian_provinces.geojson
-│   └── milano-grid.geojson
+```text
+data/archive/
 ```
 
-> The merged CSV files are generated automatically by the bootstrap script.
+---
 
-
-
-## Setup
+## Getting Started
 
 ```bash
-git clone https://github.com/Doha-Ahmed-E/TelePulse.git
 cd TelePulse
-chmod +x scripts/bootstrap.sh
+
+make base      # one-time setup
+make up
 ./scripts/bootstrap.sh
 ```
 
-The bootstrap script automatically:
+The bootstrap process initializes the Hive warehouse and analytics views from the historical data.
 
-- Creates a Python virtual environment
-- Installs Python dependencies
-- Builds all Docker images
-- Starts the Hadoop/Spark/Hive cluster
-- Merges the raw datasets
-- Uploads the datasets to HDFS
-- Executes the Spark analytics pipeline
-
-
-
-## Opening the Hadoop container
+Check HDFS with:
 
 ```bash
-docker exec -it infrastructure-master-1 bash
+docker compose -f deployment/docker-compose.yml exec master \
+hdfs dfs -ls -R /telepulse
 ```
 
-## Verifying the project
+---
 
-Inside the container:
+## Incremental Ingestion
+
+New datasets can be uploaded through the API:
+
+```text
+POST /upload
+```
+
+Uploaded files are placed in:
+
+```text
+data/uploads/incoming/
+```
+
+A background watcher monitors this directory and automatically triggers the Spark ingestion pipeline when a new supported CSV file appears.
+
+The ingestion pipeline:
+
+1. Detects the uploaded file
+2. Validates the dataset type and schema
+3. Uploads the file to HDFS
+4. Processes it with Spark
+5. Appends the data to the Hive warehouse
+6. Moves successful files to `processed/`
+7. Moves failed files to `rejected/`
+
+You can also trigger ingestion manually:
 
 ```bash
-hdfs dfs -ls /telepulse
+./scripts/run_ingestion.sh <filename>
 ```
+
+---
+
+## Analytics API
+
+The backend exposes analytics endpoints for the processed warehouse data:
+
+```text
+GET /analytics/overview
+GET /analytics/cells
+GET /analytics/hourly
+GET /analytics/hourly?province=<province>
+```
+
+The API retrieves the latest data from Hive, so newly ingested files are reflected in subsequent analytics queries.
+
+---
+
+## HDFS Safe Mode
+
+On the first startup, Hadoop may temporarily keep the NameNode in safe mode while DataNodes register.
+
+Check the current state with:
 
 ```bash
-hive
+docker compose -f deployment/docker-compose.yml exec master \
+hdfs dfsadmin -safemode get
 ```
 
-```sql
-USE telepulse;
-SHOW TABLES;
-SHOW VIEWS;
-```
+If ingestion fails because the NameNode is in safe mode, wait a few seconds and retry.
 
-Expected tables:
+---
 
-- urban_vitality
-- land_use_classification
-- spatial_diversity
+## Current Status
 
-Expected views:
+*  Dockerized Hadoop cluster
+*  HDFS data lake
+*  Spark ETL pipeline
+*  Hive data warehouse
+*  Historical bootstrap
+*  Schema validation
+*  Data transformation
+*  Incremental ingestion
+*  Upload API
+*  Automatic folder watcher
+*  Processed/rejected file workflow
+*  Analytics REST API
 
-- vw_dashboard
-- vw_dashboard_map
-- vw_activity_summary
-- vw_activity_ranking
-- vw_business_zones
-- vw_residential_zones
-- vw_cell_summary
-- vw_high_diversity
-- vw_internet_hotspots
-- vw_sms_hotspots
-- vw_call_hotspots
-- vw_kpi_summary
-- vw_land_use
-- vw_spatial_diversity
-- vw_urban_vitality
+---
 
-## Power BI Connection
+## Roadmap
 
-Inside the container: 
+* Improve analytics query performance
+* Add stronger ingestion monitoring and error reporting
+* Improve API response optimization
+* Add automated tests
 
-```bash
-start-thriftserver.sh
-```
+---
 
-```bash
-hiveserver2
-```
+## License
 
-### Verify Spark Thrift Server 
-in another container terminal:
-
-```bash
-beeline -u jdbc:hive2://localhost:10000
-```
-Power BI settings:
-
-- Host: localhost
-- Port: 10000
-- Database: telepulse
-- Authentication: None
-
+This project is intended for educational and portfolio purposes.
